@@ -1,0 +1,133 @@
+Sub	FilterAndProcessMPESAData()	
+	Dim wsSource As Worksheet	
+	Dim wsUnfiltered As Worksheet	
+	Dim wsFiltered As Worksheet	
+	Dim rngSource As Range	
+	Dim rngFiltered As Range	
+	Dim lastRow As Long	
+	Dim cell As Range	
+	Dim newRow As Long	
+		
+	' Set the source worksheet	
+""""	"Set wsSource = ThisWorkbook.Sheets(""""Sheet"	"1"""")"""
+		
+	' Create the UNFILTERED MPESA DATA sheet if	it doesn't exist
+	On Error Resume Next	
+""""	"Set wsUnfiltered = ThisWorkbook.Sheets(""""U"	"NFILTERED MPESA DATA"""")"""
+	On Error GoTo 0	
+	If wsUnfiltered Is Nothing Then	
+	Set wsUnfiltered = ThisWorkbook.Sheets.	Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+""""	"wsUnfiltered.Name = """"UNFILTERED MPESA"	"DATA"""""""
+	Else	
+	wsUnfiltered.Cells.Clear	
+	End If	
+		
+	' Create the MPESA DATA sheet if it doesn't	exist
+	On Error Resume Next	
+""""	"Set wsFiltered = ThisWorkbook.Sheets(""""MPE"	"SA DATA"""")"""
+	On Error GoTo 0	
+	If wsFiltered Is Nothing Then	
+	Set wsFiltered = ThisWorkbook.Sheets.Ad	d(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+""""	"wsFiltered.Name = """"MPESA DATA"""""""	
+	Else	
+	wsFiltered.Cells.Clear	
+	End If	
+		
+	' Get the last row of the source data	
+""""	lastRow = wsSource.Cells(wsSource.Rows.Cou	"nt, """"A"""").End(xlUp).Row"""
+		
+	' Set the source data range	
+""""	"Set rngSource = wsSource.Range(""""A1:Z"""" &"	"lastRow) ' Adjust the column range as needed"""
+		
+	' AutoFilter the source data	
+""""	rngSource.AutoFilter Field:=Application.Ma	"tch(""""Sender MSISDN"""", rngSource.Rows(1), 0), Criteria1:=""""=*MPESA*"""""""
+		
+	' Copy the filtered data to the UNFILTERED	MPESA DATA sheet
+""""	rngSource.SpecialCells(xlCellTypeVisible).	"Copy Destination:=wsUnfiltered.Cells(1, 1)"""
+		
+	' Remove AutoFilter	
+	wsSource.AutoFilterMode = False	
+		
+	' Set the filtered data range in the UNFILT	ERED MPESA DATA sheet
+""""	lastRow = wsUnfiltered.Cells(wsUnfiltered.	"Rows.Count, """"A"""").End(xlUp).Row"""
+""""	"Set rngFiltered = wsUnfiltered.Range(""""A1:"	"Z"""" & lastRow) ' Adjust the column range as needed"""
+		
+	' Set headers in the MPESA DATA sheet	
+	With wsFiltered	
+""""	".Cells(1, 1).Value = """"DATE"""""""	
+""""	".Cells(1, 2).Value = """"SENDER / RECEIV"	"ER"""""""
+""""	".Cells(1, 3).Value = """"AMOUNT SENT"""""""	
+""""	".Cells(1, 4).Value = """"AMOUNT RECEIVED"	""""""""
+	End With	
+		
+	' Process the filtered data and copy to MPE	SA DATA sheet
+	newRow = 2	
+""""	For Each cell In rngFiltered.Columns(Appli	"cation.Match(""""Content"""", rngFiltered.Rows(1), 0)).Cells"""
+	If cell.Row > 1 Then	
+	Dim content As String	
+	Dim captureTime As String	
+	Dim senderReceiver As String	
+	Dim amountSent As String	
+	Dim amountReceived As String	
+		
+	content = cell.Value	
+""""	captureTime = wsUnfiltered.Cells(c	"ell.Row, Application.Match(""""Capture Time"""", rngFiltered.Rows(1), 0)).Value"""
+		
+	' Extract SENDER / RECEIVER	
+	senderReceiver = ExtractSenderRecei	ver(content)
+		
+	' Extract AMOUNT SENT	
+""""	amountSent = ExtractAmount(content	", """"Confirmed. Ksh"""", """"sent to"""")"""
+""""	"If amountSent = """""""" Then amountSe"	"nt = ExtractAmount(content, """"bought Ksh"""", """"0 of"""")"""
+		
+	' Extract AMOUNT RECEIVED	
+""""	amountReceived = ExtractAmount(con	"tent, """"received Ksh"""", """"from """")"""
+		
+	' Write to the MPESA DATA sheet	
+	With wsFiltered	
+""""	".Cells(newRow, 1).Value = capt"	"ureTime"""
+""""	".Cells(newRow, 2).Value = send"	"erReceiver"""
+""""	".Cells(newRow, 3).Value = amou"	"ntSent"""
+""""	".Cells(newRow, 4).Value = amou"	"ntReceived"""
+	End With	
+	newRow = newRow + 1	
+	End If	
+	Next cell	
+End	Sub	
+		
+Func	tion ExtractSenderReceiver(content As Strin	g) As String
+	Dim startPos As Long	
+	Dim endPos As Long	
+	Dim keywords As Variant	
+	Dim i As Integer	
+		
+""""	"keywords = Array(""""from """", """"sent to """","	"""""paid to """", """"0 of"""")"""
+	For i = LBound(keywords) To UBound(keywords	)
+""""	"startPos = InStr(1, content, keywords("	"i), vbTextCompare)"""
+	If startPos > 0 Then	
+	startPos = startPos + Len(keywords(	i))
+""""	"endPos = InStr(startPos, content,"	""""" on """", vbTextCompare)"""
+	If endPos > 0 Then	
+""""	ExtractSenderReceiver = Mid(co	"ntent, startPos, endPos - startPos)"""
+	Exit Function	
+	End If	
+	End If	
+	Next i	
+""""	"ExtractSenderReceiver = """""""""""	
+End	Function	
+		
+"""Fun"	"ction ExtractAmount(content As String, star"	"tText As String, endText As String) As String"""
+	Dim startPos As Long	
+	Dim endPos As Long	
+		
+""""	"startPos = InStr(1, content, startText, vb"	"TextCompare)"""
+	If startPos > 0 Then	
+	startPos = startPos + Len(startText)	
+""""	"endPos = InStr(startPos, content, endT"	"ext, vbTextCompare)"""
+	If endPos > 0 Then	
+""""	"ExtractAmount = """"Ksh."""" & Trim(Mi"	"d(content, startPos, endPos - startPos))"""
+	Exit Function	
+	End If	
+	End If	
+""""	"ExtractAmount = """""""""""	
+End	Function	
